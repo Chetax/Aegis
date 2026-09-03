@@ -1,0 +1,23 @@
+# Flutter
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.pub-cache/
+
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+
+# Env
+.env
+backend/.env
+
+# Model artifacts
+offline_model/export/*.gguf
+offline_model/export/*.bin
+
+# OS
+.DS_Store
