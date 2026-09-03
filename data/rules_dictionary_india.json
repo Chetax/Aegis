@@ -1,0 +1,63 @@
+{
+  "country_code": "IN",
+  "country_name": "India",
+  "last_updated": "2026-09-03",
+  "emergency_contacts": {
+    "cyber_crime_helpline": "1930",
+    "cyber_crime_portal": "https://cybercrime.gov.in",
+    "police_helpline": "112",
+    "women_helpline": "181",
+    "note": "1930 is run 24/7 by the Indian Cyber Crime Coordination Centre (I4C), Ministry of Home Affairs, for reporting financial fraud specifically."
+  },
+  "entries": [
+    {
+      "id": "in-001",
+      "category": "otp_kyc",
+      "rule": "No bank, financial institution, or the RBI will ever ask you to share your OTP, PIN, CVV, password, or KYC documents over a phone call, SMS, or email.",
+      "red_flag_context": "A caller claiming to be from your bank, RBI, or a payment company asks you to read out an OTP or share a PIN to 'verify', 'unblock', or 'update' your account.",
+      "source": "RBI public advisory, reported via Business Standard, Aug 2024",
+      "source_url": "https://www.business-standard.com/finance/news/rbi-cautions-against-fraud-warns-against-sharing-otp-and-kyc-details-124082901205_1.html"
+    },
+    {
+      "id": "in-002",
+      "category": "rbi_impersonation",
+      "rule": "The RBI does not open accounts for members of the public, take public deposits, or send emails/SMS about lottery winnings or foreign fund transfers.",
+      "red_flag_context": "A message claims to be from the RBI announcing a prize, lottery win, or a large sum of money awaiting transfer, and asks for a small 'processing fee' first.",
+      "source": "RBI public advisory, reported via Business Standard, Aug 2024",
+      "source_url": "https://www.business-standard.com/finance/news/rbi-cautions-against-fraud-warns-against-sharing-otp-and-kyc-details-124082901205_1.html"
+    },
+    {
+      "id": "in-003",
+      "category": "upi_request_money",
+      "rule": "You never need to enter your UPI PIN to RECEIVE money. Entering a PIN is only required to send/pay money.",
+      "red_flag_context": "Someone posing as a buyer on an online marketplace sends a 'collect request' via UPI and asks you to enter your PIN to 'accept' a payment.",
+      "source": "Punjab & Sind Bank cyber fraud awareness page, citing RBI guidance",
+      "source_url": "https://www.punjabandsind.bank.in/content/cyberfraud"
+    },
+    {
+      "id": "in-004",
+      "category": "investment_job_scam",
+      "rule": "Legitimate part-time job or investment offers do not require you to 'load money' into a platform before you can withdraw earnings, and do not route payments through unauthorized third-party UPI IDs.",
+      "red_flag_context": "A job or investment offer over WhatsApp/Telegram asks you to complete small paid 'tasks' and deposit money to unlock larger returns.",
+      "source": "RBI Advisory on Frauds/Cybercrimes through investment and part-time job scams, via Federal Bank",
+      "source_url": "https://www.federal.bank.in/rbi-advisory-frauds-cybercrimes"
+    },
+    {
+      "id": "in-005",
+      "category": "reporting",
+      "rule": "Financial cyber fraud in India should be reported immediately via the 1930 helpline or cybercrime.gov.in — the faster it's reported, the higher the chance of freezing the funds before they're withdrawn.",
+      "red_flag_context": "Used as the standard 'next step' recommendation any time the check-in verdict concludes a scam is likely, or already happened.",
+      "source": "National Cyber Crime Reporting Portal / I4C, Ministry of Home Affairs",
+      "source_url": "https://cybercrime.gov.in"
+    }
+  ],
+  "universal_fallback_patterns": {
+    "note": "Used for any country_code without a populated dictionary yet. Jurisdiction-agnostic, safe to show anywhere.",
+    "patterns": [
+      "No legitimate institution asks for your password, PIN, OTP, or full card number over phone, SMS, or email — ever, under any pretext.",
+      "Urgency plus secrecy together is the core scam pattern: 'act now' combined with 'don't tell anyone' is designed to stop you from checking with someone you trust.",
+      "If in doubt, hang up and call back using a number from your card, bank statement, or the institution's official website — never a number the caller gave you.",
+      "Nobody legitimate asks you to pay a fee upfront to receive a prize, lottery win, or inheritance."
+    ]
+  }
+}
