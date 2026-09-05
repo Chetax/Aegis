@@ -151,6 +151,10 @@ VERDICT_TEMPLATES = {
         "en": "Based on what you've told me, I don't see a clear warning sign. But if anything feels off, it's fine to pause and check with your bank or a family member before doing anything.",
         "hi": "आपने जो बताया उसके आधार पर, मुझे कोई साफ चेतावनी का संकेत नहीं दिखा। लेकिन अगर कुछ भी अजीब लगे, तो कुछ भी करने से पहले रुकना और अपने बैंक या परिवार के किसी सदस्य से पूछना ठीक रहेगा।",
     },
+        "high_no_match": {
+        "en": "I don't recognise this as one specific known scam, but the mix of pressure and secrecy here is exactly how scams get people to act without stopping to think. Treat it as high risk — don't do what they're asking, and check independently by calling the bank or person back on a number you look up yourself, not one they gave you. {reporting}",
+        "hi": "मैं इसे किसी एक खास जाने-पहचाने स्कैम के रूप में नहीं पहचान पा रहा, लेकिन जिस तरह यहाँ जल्दबाज़ी और गोपनीयता दोनों हैं — स्कैम ठीक इसी तरह लोगों को बिना सोचे काम करवाते हैं। इसे ऊँचे जोखिम के रूप में लें — जो वो माँग रहे हैं वो मत करें, और खुद से ढूँढे गए नंबर पर बैंक या उस व्यक्ति को वापस कॉल करके जाँचें, उनके दिए नंबर पर नहीं। {reporting}",
+    },
 }
 
 REPORTING_SUFFIX = {
