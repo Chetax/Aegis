@@ -1,7 +1,7 @@
 {
   "country_code": "IN",
   "country_name": "India",
-  "last_updated": "2026-09-03",
+  "last_updated": "2026-09-06",
   "emergency_contacts": {
     "cyber_crime_helpline": "1930",
     "cyber_crime_portal": "https://cybercrime.gov.in",
@@ -49,6 +49,14 @@
       "red_flag_context": "Used as the standard 'next step' recommendation any time the check-in verdict concludes a scam is likely, or already happened.",
       "source": "National Cyber Crime Reporting Portal / I4C, Ministry of Home Affairs",
       "source_url": "https://cybercrime.gov.in"
+    },
+    {
+      "id": "in-006",
+      "category": "digital_arrest",
+      "rule": "No Indian law enforcement agency — police, CBI, ED, Customs, RBI, or the courts — ever arrests, interrogates, or collects fines or 'security deposits' over a phone or video call, and none conducts investigations via WhatsApp, Skype, or Zoom. A real arrest never happens over a screen, and no genuine official will demand money to 'settle' or 'clear' a case.",
+      "red_flag_context": "A caller claims to be from the police, CBI, ED, Customs, or a courier company and says a parcel in your name contains drugs or illegal items, or that you or a family member are named in a serious crime. They manufacture panic, tell you not to hang up or tell anyone, and keep you on a video call ('digital arrest') while demanding an immediate money transfer to prove your innocence or avoid arrest.",
+      "source": "I4C 'Digital Arrest' cybercrime advisory (four-stage pattern: impersonation, intimidation, digital confinement, extortion), National Cyber Crime Reporting Portal, I4C / Ministry of Home Affairs",
+      "source_url": "https://cybercrime.gov.in/Webform/Advisory.aspx"
     }
   ],
   "universal_fallback_patterns": {
