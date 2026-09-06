@@ -151,9 +151,48 @@ VERDICT_TEMPLATES = {
         "en": "Based on what you've told me, I don't see a clear warning sign. But if anything feels off, it's fine to pause and check with your bank or a family member before doing anything.",
         "hi": "आपने जो बताया उसके आधार पर, मुझे कोई साफ चेतावनी का संकेत नहीं दिखा। लेकिन अगर कुछ भी अजीब लगे, तो कुछ भी करने से पहले रुकना और अपने बैंक या परिवार के किसी सदस्य से पूछना ठीक रहेगा।",
     },
+    "high_no_match": {
+        "en": "I don't recognise this as one specific known scam, but the mix of pressure and secrecy here is exactly how scams get people to act without stopping to think. Treat it as high risk — don't do what they're asking, and check independently by calling the bank or person back on a number you look up yourself, not one they gave you. {reporting}",
+        "hi": "मैं इसे किसी एक खास जाने-पहचाने स्कैम के रूप में नहीं पहचान पा रहा, लेकिन जिस तरह यहाँ जल्दबाज़ी और गोपनीयता दोनों हैं — स्कैम ठीक इसी तरह लोगों को बिना सोचे काम करवाते हैं। इसे ऊँचे जोखिम के रूप में लें — जो वो माँग रहे हैं वो मत करें, और खुद से ढूँढे गए नंबर पर बैंक या उस व्यक्ति को वापस कॉल करके जाँचें, उनके दिए नंबर पर नहीं। {reporting}",
+    },
 }
 
 REPORTING_SUFFIX = {
     "en": "If you've already shared something you shouldn't have, report it now: call 1930 or visit cybercrime.gov.in.",
     "hi": "अगर आपने पहले ही कुछ ऐसा बता दिया है जो नहीं बताना चाहिए था, तो अभी रिपोर्ट करें: 1930 पर कॉल करें या cybercrime.gov.in पर जाएं।",
 }
+
+# Used by the grade() node. Judges the user's teach-back explanation ONLY
+# against the reference (the matched rule, or — when no rule matched — the
+# manipulation principle that made it high risk). Fenced in so the LLM can't
+# invent its own standard or add new scam facts into a teaching moment for a
+# vulnerable user. Uses double braces where literal JSON braces are needed so
+# .format() only fills {reference}, {explanation}, {language_name}.
+GRADE_SYSTEM_PROMPT = """You are the teach-back grader in a scam-safety tool.
+
+A user was just shown why a situation was risky, and has now explained, IN THEIR
+OWN WORDS, why it was risky. Judge whether their explanation captures the key
+reason — comparing ONLY against the reference point below. Do NOT grade against
+your own general knowledge of scams. Do NOT introduce new scam details the user
+did not mention.
+
+Reference point (what they should have grasped):
+{reference}
+
+The user's explanation:
+{explanation}
+
+Choose exactly one grade:
+- "correct": they clearly grasped the key reason, even if worded simply.
+- "partial": they got part of it, were vague, or mixed a right idea with a wrong one.
+- "off_track": they misunderstood, or gave an unrelated reason.
+
+Then write ONE short, warm feedback sentence in {language_name} for the user (who
+may be elderly, anxious, or not tech-savvy — never condescending, never harsh):
+- If correct: affirm what they got right, plainly.
+- If partial or off_track: gently restate the key point. Do not scold. Do not add
+  new scam mechanics.
+
+Output ONLY valid JSON, nothing else — no preamble, no markdown fences:
+{{"grade_result": "correct" | "partial" | "off_track", "grade_feedback": "<one short sentence>"}}
+"""
