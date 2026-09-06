@@ -15,7 +15,7 @@ load_dotenv()
 
 from .prompts import (
     INTAKE_SYSTEM_PROMPT, INTAKE_EXAMPLES, CLARIFY_QUESTIONS,
-    VERDICT_TEMPLATES, REPORTING_SUFFIX,
+    VERDICT_TEMPLATES, REPORTING_SUFFIX, GRADE_SYSTEM_PROMPT,
 )
 from ..rag.store import query_rules, get_by_category
 
@@ -28,6 +28,11 @@ SENSITIVE_INFO_KEYWORDS = [
 
 _intake_llm = ChatBedrockConverse(
     model_id=os.getenv("BEDROCK_INTAKE_MODEL_ID", "amazon.nova-micro-v1:0"),
+    region_name=os.getenv("AWS_REGION", "us-east-1"),
+)
+
+_grade_llm = ChatBedrockConverse(
+    model_id=os.getenv("BEDROCK_GRADE_MODEL_ID", "amazon.nova-micro-v1:0"),
     region_name=os.getenv("AWS_REGION", "us-east-1"),
 )
 
@@ -276,7 +281,68 @@ def teach_back(state: CheckinState) -> CheckinState:
 
 
 def grade(state: CheckinState) -> CheckinState:
-    """TODO: grade the user's explanation against the matched rule."""
+    """Grade the user's teach-back explanation against the matched rule
+    (or, if no rule matched, against the manipulation principle that made
+    it high risk).
+
+    This is the ONLY node that uses an LLM to make a JUDGMENT — because
+    "did this explanation show understanding?" is open-ended language and
+    can't be done with if/else like classify. It is fenced in so it stays
+    grounded: it grades ONLY against the reference below, adds no new scam
+    facts, and fails safe to a neutral 'partial' if the model returns junk
+    (so it never falsely praises the user and never crashes the check-in)."""
+    lang = state.get("language", "en")
+    explanation = (state.get("user_explanation") or "").strip()
+
+    # (A) Nothing to grade: it wasn't risky (low), or the user said nothing.
+    #     Exit gracefully — don't send an empty question to the LLM.
+    if state.get("risk_level") == "low" or not explanation:
+        state["grade_result"] = "partial"
+        state["grade_feedback"] = (
+            "No problem — the main thing is to pause and check whenever "
+            "something feels off."
+            if lang == "en" else
+            "कोई बात नहीं — सबसे ज़रूरी बात यही है कि जब भी कुछ अजीब लगे, रुककर जाँच लें।"
+        )
+        return state
+
+    # (B) Pick the answer key. If a rule matched, that's the reference.
+    #     If NOT (the high_no_match case, e.g. the emergency scam), grade
+    #     against the manipulation principle that triggered the flag.
+    reference = state.get("matched_rule_text")
+    if not reference:
+        reference = (
+            "The real danger was the combination of pressure to act "
+            "immediately and being told to keep it secret or not check with "
+            "anyone — that isolation is how scams stop people thinking clearly."
+        )
+
+    # (C) Ask the LLM to judge the explanation against the reference only.
+    language_name = "Hindi" if lang == "hi" else "English"
+    prompt = GRADE_SYSTEM_PROMPT.format(
+        reference=reference,
+        explanation=explanation,
+        language_name=language_name,
+    )
+    try:
+        response = _grade_llm.invoke(prompt)
+        parsed = json.loads(response.content)
+        result = parsed.get("grade_result")
+        feedback = (parsed.get("grade_feedback") or "").strip()
+        if result not in ("correct", "partial", "off_track") or not feedback:
+            raise ValueError("grade output missing/invalid fields")
+    except (json.JSONDecodeError, TypeError, ValueError):
+        # (D) Model failed or returned junk. Never crash, never falsely
+        #     praise. Fall back to neutral 'partial' and re-teach the point.
+        result = "partial"
+        feedback = (
+            f"The key thing to remember: {reference}"
+            if lang == "en" else
+            f"याद रखने वाली मुख्य बात: {reference}"
+        )
+
+    state["grade_result"] = result
+    state["grade_feedback"] = feedback
     return state
 
 
