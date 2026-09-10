@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
-import 'screens/checkin_screen.dart';
+import 'screens/main_scaffold.dart';
+import 'theme/app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const AegisApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AegisApp extends StatelessWidget {
+  const AegisApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Aegis',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const CheckinScreen(),
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.dark(),
+      home: const MainScaffold(),
     );
   }
 }
