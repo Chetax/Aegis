@@ -4,9 +4,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import '../services/checkin_socket_service.dart';
+import '../services/progress_service.dart';
 import '../model/checkin_frame.dart';
 import '../theme/app_theme.dart';
 import '../widgets/aegis_widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum CheckinPhase { idle, connecting, question, done, error }
 
@@ -22,7 +24,6 @@ class QAExchange {
   });
 }
 
-
 class CheckinScreen extends StatefulWidget {
   const CheckinScreen({super.key});
   @override
@@ -30,18 +31,15 @@ class CheckinScreen extends StatefulWidget {
 }
 
 class _CheckinScreenState extends State<CheckinScreen> {
-  // Not `late final` — we reassign on "new check-in" to open a fresh socket.
   late CheckinSocketService _service;
   final _inputController = TextEditingController();
+  final _progress = ProgressService();
 
   CheckinPhase _phase = CheckinPhase.idle;
   QuestionFrame? _currentQuestion;
   DoneFrame? _finalResult;
   String _errorText = '';
-    // History of completed Q&A pairs, oldest first.
   final List<QAExchange> _history = [];
-  // The answer the user just sent — pending, waiting for the next frame to
-  // confirm it "landed" so we can commit it to history.
   String? _pendingAnswer;
 
   @override
@@ -55,21 +53,19 @@ class _CheckinScreenState extends State<CheckinScreen> {
     _service.frames.listen(_onFrame);
   }
 
-    void _onFrame(CheckinFrame frame) {
+  void _onFrame(CheckinFrame frame) {
     setState(() {
       switch (frame) {
         case QuestionFrame():
-          // If there was a previous question with a pending answer, commit
-          // that pair to history before showing the new question.
           _commitPendingAnswer();
           _phase = CheckinPhase.question;
           _currentQuestion = frame;
           _inputController.clear();
         case DoneFrame():
-          // Commit the last teach-back answer to history before showing done.
           _commitPendingAnswer();
           _phase = CheckinPhase.done;
           _finalResult = frame;
+          _awardTeachBackXp(frame); // fire-and-forget, runs once per frame
         case ErrorFrame():
           _phase = CheckinPhase.error;
           _errorText = frame.text;
@@ -77,9 +73,40 @@ class _CheckinScreenState extends State<CheckinScreen> {
     });
   }
 
-  /// If a question was on screen and the user answered it, push that pair
-  /// into history. Called when the next frame arrives, confirming the graph
-  /// accepted the answer.
+  /// XP for the teach-back understanding only — deliberately NOT for the
+  /// check-in verdict itself. Check-In stays a serious tool, not a game.
+  Future<void> _awardTeachBackXp(DoneFrame frame) async {
+    final teachBack = frame.result['teach_back'] as Map<String, dynamic>?;
+    if (teachBack == null) return;
+    final grade = (teachBack['result'] ?? '').toString();
+    final xpAward = switch (grade) {
+      'correct' => 15,
+      'partial' => 5,
+      _ => 0,
+    };
+    if (xpAward > 0) {
+      await _progress.addXp(xpAward);
+    }
+  }
+
+  Future<void> _reportIt() async {
+  final uri = Uri(scheme: 'tel', path: '1930');
+  try {
+    final launched = await launchUrl(uri);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open dialer. Call 1930 directly.')),
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open dialer. Call 1930 directly.')),
+      );
+    }
+  }
+}
+
   void _commitPendingAnswer() {
     if (_currentQuestion != null && _pendingAnswer != null) {
       _history.add(QAExchange(
@@ -98,7 +125,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
     _inputController.clear();
   }
 
-    void _submitAnswer() {
+  void _submitAnswer() {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
     _pendingAnswer = text;
@@ -113,8 +140,8 @@ class _CheckinScreenState extends State<CheckinScreen> {
       _finalResult = null;
       _errorText = '';
       _inputController.clear();
-      _history.clear(); 
-      _pendingAnswer = null; 
+      _history.clear();
+      _pendingAnswer = null;
     });
     _connect();
   }
@@ -255,7 +282,6 @@ class _CheckinScreenState extends State<CheckinScreen> {
   }
 
   // ---------- QUESTION ----------
-  
   Widget _buildQuestion() {
     final isTeachBack = _currentQuestion!.field == 'user_explanation';
     final label = isTeachBack ? 'TEACH-BACK' : 'CLARIFICATION';
@@ -273,21 +299,12 @@ class _CheckinScreenState extends State<CheckinScreen> {
           ],
         ),
         const SizedBox(height: 20),
-
-        // History of prior Q&A, if any — old ones dimmed so the current
-        // question is what draws the eye.
         if (_history.isNotEmpty) ...[
           ..._history.map((qa) => _buildHistoryItem(qa)),
           const SizedBox(height: 8),
-          // Divider between history and current question.
-          Container(
-            height: 1,
-            color: AppColors.border,
-          ),
+          Container(height: 1, color: AppColors.border),
           const SizedBox(height: 20),
         ],
-
-        // Current question — full brightness, larger type.
         Text(
           _currentQuestion!.text,
           style: GoogleFonts.inter(
@@ -318,15 +335,12 @@ class _CheckinScreenState extends State<CheckinScreen> {
     );
   }
 
-  /// One past Q&A pair, dimmed. Small type, muted colors — visible for
-  /// context but not competing with the current question for attention.
   Widget _buildHistoryItem(QAExchange qa) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Question — small, muted, monospace label prefix.
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -351,7 +365,6 @@ class _CheckinScreenState extends State<CheckinScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          // Answer — indented, slightly brighter to distinguish from question.
           Padding(
             padding: const EdgeInsets.only(left: 20),
             child: Row(
@@ -380,40 +393,76 @@ class _CheckinScreenState extends State<CheckinScreen> {
 
   // ---------- DONE ----------
   Widget _buildDone() {
-    final result = _finalResult!.result;
-    final risk = (result['risk_level'] ?? 'low').toString();
-    final verdict = (result['verdict_text'] ?? '').toString();
-    final category = result['matched_category']?.toString();
-    final teachBack = result['teach_back'] as Map<String, dynamic>?;
+  final result = _finalResult!.result;
+  final risk = (result['risk_level'] ?? 'low').toString();
+  final verdict = (result['verdict_text'] ?? '').toString();
+  final category = result['matched_category']?.toString();
+  final teachBack = result['teach_back'] as Map<String, dynamic>?;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            AegisLogo(size: 36, showText: false),
-            StatusPill(label: 'ANALYSIS COMPLETE', dotColor: AppColors.accent),
-          ],
-        ),
-        const SizedBox(height: 28),
-        RiskVerdictCard(
-          riskLevel: risk,
-          verdictText: verdict,
-          matchedCategory: category,
-        ),
-        if (teachBack != null) ...[
-          const SizedBox(height: 20),
-          _buildTeachBack(teachBack),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const SizedBox(height: 12),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: const [
+          AegisLogo(size: 36, showText: false),
+          StatusPill(label: 'ANALYSIS COMPLETE', dotColor: AppColors.accent),
         ],
-        const SizedBox(height: 24),
-        GhostButton(onPressed: _startNew, label: 'New Check-In'),
-        const SizedBox(height: 24),
+      ),
+      const SizedBox(height: 28),
+      RiskVerdictCard(
+        riskLevel: risk,
+        verdictText: verdict,
+        matchedCategory: category,
+      ),
+      if (risk.toLowerCase() == 'high') ...[
+        const SizedBox(height: 16),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _reportIt,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(
+                color: AppColors.riskHigh.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.riskHigh.withOpacity(0.5), width: 1.5),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.call, color: AppColors.riskHigh, size: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Report It — Call 1930',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.riskHigh,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
-    );
-  }
+      if (teachBack != null) ...[
+        const SizedBox(height: 20),
+        _buildTeachBack(teachBack),
+      ],
+      const SizedBox(height: 24),
+      GhostButton(onPressed: _startNew, label: 'New Check-In'),
+      const SizedBox(height: 24),
+    ],
+  );
+}
 
+  /// Pure display — no side effects here. XP was already awarded once in
+  /// `_awardTeachBackXp` when the DoneFrame first arrived (build methods
+  /// can run many times and must stay side-effect-free).
   Widget _buildTeachBack(Map<String, dynamic> tb) {
     final grade = (tb['result'] ?? '').toString();
     final feedback = (tb['feedback'] ?? '').toString();
@@ -469,8 +518,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline,
-              size: 64, color: AppColors.riskHigh),
+          Icon(Icons.error_outline, size: 64, color: AppColors.riskHigh),
           const SizedBox(height: 16),
           Text(
             'Something went wrong',
