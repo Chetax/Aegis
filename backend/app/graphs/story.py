@@ -42,6 +42,27 @@ STRICT RULES:
 - The victim should be portrayed with dignity — this could happen to
   anyone, not just "gullible" people.
 
+QUIZ GROUNDING — CRITICAL:
+- The quiz's correct answer AND every wrong option must each describe a
+  concrete, well-established scam TACTIC (e.g.: urgency + demand for
+  secrecy together; being asked for an OTP/PIN/UPI PIN by someone you
+  didn't initiate contact with; an unsolicited job offer that pays you
+  first and asks you to forward money on — money-mule recruitment; a
+  prize/lottery/refund that requires paying a fee first; a caller
+  impersonating an official demanding immediate payment to "avoid
+  arrest" or "clear a case").
+- NEVER write a correct answer or a "suspicious" option that is just an
+  ordinary, everyday transaction with no manipulative tactic attached —
+  e.g. "receiving money from someone", "getting paid for a job",
+  "someone paying you back", "a refund arriving". These happen
+  constantly for innocent reasons (a friend reimbursing you, a tax
+  refund, splitting a bill between cash and online payment) and
+  flagging them as scam signs teaches distrust of normal life, which
+  undermines the whole app.
+- Every wrong option must be either a genuinely safe, ordinary action,
+  OR a DIFFERENT real tactic than the one in the story — never a vague
+  restatement of "money changed hands."
+
 OUTPUT FORMAT: Return ONLY valid JSON, no prose before or after:
 {
   "title": "Short title, 6-10 words, engaging",
@@ -73,9 +94,7 @@ IMPORTANT: The example above shows the JSON SHAPE only. Never reuse its
 exact wording. Write a question, options, and explanation that are
 specific to the red flags in THIS story — do not copy "Which of these is
 ALSO a scam warning sign?" or any other example phrasing verbatim.
-
 """
-
 
 def _fallback_story(rule: dict[str, Any]) -> dict[str, Any]:
     """Bundled story if Bedrock fails — never a broken screen."""
