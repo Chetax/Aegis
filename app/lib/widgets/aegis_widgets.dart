@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/progress_service.dart';
 
 /// The Aegis brand mark — shield icon with subtle pulse + wordmark.
 class AegisLogo extends StatelessWidget {
@@ -167,6 +168,28 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
+class ProgressBadge extends StatelessWidget {
+  final int streak;
+  final int xp;
+  const ProgressBadge({super.key, required this.streak, required this.xp});
+
+  @override
+  Widget build(BuildContext context) {
+    final level = ProgressService.levelForXp(xp);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 18),
+        const SizedBox(width: 4),
+        Text('$streak', style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(width: 12),
+        Text('$xp XP · $level',
+            style: const TextStyle(fontFamily: 'JetBrains Mono', fontSize: 12)),
+      ],
+    );
+  }
+}
+
 /// Ghost button — for secondary actions like "start over".
 class GhostButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -327,6 +350,7 @@ class _GridPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
+
 
   @override
   bool shouldRepaint(_) => false;

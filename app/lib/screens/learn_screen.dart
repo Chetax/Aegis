@@ -5,6 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../model/daily_story.dart';
 import '../services/story_service.dart';
+import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/aegis_widgets.dart';
 
@@ -19,6 +20,7 @@ class LearnScreen extends StatefulWidget {
 class _LearnScreenState extends State<LearnScreen> {
   final _service = StoryService();
   final _tts = FlutterTts();
+  final _progress = ProgressService();
 
   LearnPhase _phase = LearnPhase.loading;
   DailyStory? _story;
@@ -27,11 +29,26 @@ class _LearnScreenState extends State<LearnScreen> {
   int? _selectedAnswer;
   bool _quizSubmitted = false;
 
+  // Progress state — loaded once, updated as XP/streak events happen.
+  int _streak = 0;
+  int _xp = 0;
+
   @override
   void initState() {
     super.initState();
     _initTts();
+    _loadProgress();
     _load();
+  }
+
+  Future<void> _loadProgress() async {
+    final streak = await _progress.getStreak();
+    final xp = await _progress.getXp();
+    if (!mounted) return;
+    setState(() {
+      _streak = streak;
+      _xp = xp;
+    });
   }
 
   Future<void> _initTts() async {
@@ -41,14 +58,9 @@ class _LearnScreenState extends State<LearnScreen> {
     await _tts.setVolume(1.0);
     await _tts.awaitSpeakCompletion(true);
 
-    // Try to pick a higher-quality voice if the device has one.
-    // On real Android with Google TTS, "en-us-x-sfg-network" voices are
-    // the neural cloud-quality ones. On emulator, whatever's available
-    // will be picked.
     try {
       final voices = await _tts.getVoices;
       if (voices is List) {
-        // Prefer network (neural) voices, then any en-US voice.
         final preferred = voices.firstWhere(
           (v) => v is Map &&
               v['locale']?.toString().startsWith('en-') == true &&
@@ -77,7 +89,6 @@ class _LearnScreenState extends State<LearnScreen> {
         _story = story;
         _phase = LearnPhase.story;
       });
-      // Auto-narrate the first scene after a brief settle.
       Future.delayed(const Duration(milliseconds: 600), _speakCurrentScene);
     } catch (e) {
       setState(() {
@@ -86,12 +97,21 @@ class _LearnScreenState extends State<LearnScreen> {
       });
     }
   }
+  bool _isSpeaking = false;
 
   Future<void> _speakCurrentScene() async {
-    if (_story == null) return;
+  if (_story == null || _isSpeaking) return;
+  _isSpeaking = true;
+  try {
     await _tts.stop();
-    await _tts.speak(_story!.scenes[_currentScene].text);
+    final result = await _tts.speak(_story!.scenes[_currentScene].text);
+    debugPrint('TTS speak() returned: $result');
+  } catch (e) {
+    debugPrint('TTS error: $e');
+  } finally {
+    _isSpeaking = false; // ALWAYS resets, even if something above threw
   }
+}
 
   void _nextScene() {
     if (_story == null) return;
@@ -108,14 +128,30 @@ class _LearnScreenState extends State<LearnScreen> {
     setState(() => _phase = LearnPhase.quiz);
   }
 
-  void _submitQuiz() {
+  /// Marks the quiz submitted, shows correct/wrong styling, and awards XP
+  /// for attempting the quiz (more for correct, a little for trying).
+  Future<void> _submitQuiz() async {
     if (_selectedAnswer == null) return;
     setState(() => _quizSubmitted = true);
   }
 
-  void _finish() {
-    setState(() => _phase = LearnPhase.complete);
+  /// Called when the user finishes the whole lesson. Awards the
+  /// completion bonus and updates the streak, then moves to the
+  /// complete screen.
+  Future<void> _finish() async {
+  if (!await _progress.completedToday()) {
+    final isCorrect = _selectedAnswer == _story!.quiz.correctIndex;
+    await _progress.addXp(isCorrect ? 25 : 15); // quiz + completion, combined
+    final newStreak = await _progress.markTodayActive();
+    if (mounted) setState(() => _streak = newStreak);
   }
+  final xp = await _progress.getXp();
+  if (!mounted) return;
+  setState(() {
+    _xp = xp;
+    _phase = LearnPhase.complete;
+  });
+}
 
   @override
   void dispose() {
@@ -161,7 +197,7 @@ class _LearnScreenState extends State<LearnScreen> {
   // ---------- LOADING ----------
   Widget _buildLoading() {
     return SizedBox(
-      width: double.infinity,                          
+      width: double.infinity,
       height: MediaQuery.of(context).size.height * 0.8,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -212,8 +248,6 @@ class _LearnScreenState extends State<LearnScreen> {
           ),
         ),
         const SizedBox(height: 24),
-
-        // The comic-strip card — big icon, then narrative text.
         KeyedSubtree(
           key: ValueKey(_currentScene),
           child: Container(
@@ -250,7 +284,6 @@ class _LearnScreenState extends State<LearnScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Replay button — small, unobtrusive.
                 TextButton.icon(
                   onPressed: _speakCurrentScene,
                   icon: const Icon(Icons.volume_up,
@@ -270,10 +303,7 @@ class _LearnScreenState extends State<LearnScreen> {
               .fadeIn(duration: 350.ms)
               .slideX(begin: 0.15, end: 0, curve: Curves.easeOut),
         ),
-
         const SizedBox(height: 24),
-
-        // Back button — only visible from scene 2 onward.
         if (_currentScene > 0)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -293,9 +323,6 @@ class _LearnScreenState extends State<LearnScreen> {
               ),
             ),
           ),
-
-        // Progress dots.
-        // Tappable progress dots — jump to any scene you've reached.
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(_story!.scenes.length, (i) {
@@ -321,7 +348,6 @@ class _LearnScreenState extends State<LearnScreen> {
             );
           }),
         ),
-
         const SizedBox(height: 24),
         PrimaryButton(
           onPressed: _nextScene,
@@ -344,7 +370,6 @@ class _LearnScreenState extends State<LearnScreen> {
               onPressed: () {
                 setState(() {
                   _phase = LearnPhase.story;
-                  // Jump back to last scene so they can also step through.
                   _currentScene = _story!.scenes.length - 1;
                 });
               },
@@ -362,7 +387,7 @@ class _LearnScreenState extends State<LearnScreen> {
           _buildHeader('WHAT GAVE IT AWAY'),
           const SizedBox(height: 20),
           Text(
-            'Three red flags in that story',
+            '${_story!.redFlags.length} red flags in that story',
             style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -388,8 +413,8 @@ class _LearnScreenState extends State<LearnScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.bgSurface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: AppColors.riskHigh.withOpacity(0.4)),
+                  border:
+                      Border.all(color: AppColors.riskHigh.withOpacity(0.4)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -470,7 +495,6 @@ class _LearnScreenState extends State<LearnScreen> {
               onPressed: () {
                 setState(() {
                   _phase = LearnPhase.flags;
-                  // Reset quiz state so a re-attempt starts clean.
                   _selectedAnswer = null;
                   _quizSubmitted = false;
                 });
@@ -560,7 +584,6 @@ class _LearnScreenState extends State<LearnScreen> {
               ),
             );
           }),
-
           if (_quizSubmitted) ...[
             const SizedBox(height: 16),
             Container(
@@ -612,7 +635,7 @@ class _LearnScreenState extends State<LearnScreen> {
   // ---------- COMPLETE ----------
   Widget _buildComplete() {
     return SizedBox(
-      width: double.infinity, 
+      width: double.infinity,
       height: MediaQuery.of(context).size.height * 0.75,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -629,9 +652,7 @@ class _LearnScreenState extends State<LearnScreen> {
             ),
             child: const Icon(Icons.check_circle,
                 size: 72, color: AppColors.riskLow),
-          )
-              .animate()
-              .scale(
+          ).animate().scale(
                 begin: const Offset(0.5, 0.5),
                 end: const Offset(1, 1),
                 duration: 500.ms,
@@ -655,6 +676,15 @@ class _LearnScreenState extends State<LearnScreen> {
               color: AppColors.textSecondary,
             ),
           ).animate(delay: 500.ms).fadeIn(),
+          const SizedBox(height: 14),
+          Text(
+            '🔥 $_streak day streak  ·  $_xp XP total',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 13,
+              color: AppColors.accent,
+              letterSpacing: 0.5,
+            ),
+          ).animate(delay: 600.ms).fadeIn(),
           const SizedBox(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -677,8 +707,7 @@ class _LearnScreenState extends State<LearnScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Icon(Icons.cloud_off,
-              size: 64, color: AppColors.textMuted),
+          const Icon(Icons.cloud_off, size: 64, color: AppColors.textMuted),
           const SizedBox(height: 16),
           Text(
             'Couldn\'t load today\'s story',
@@ -718,11 +747,21 @@ class _LearnScreenState extends State<LearnScreen> {
   }
 
   Widget _buildHeader(String label) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AegisLogo(size: 32, showText: false),
-        StatusPill(label: label, dotColor: AppColors.accent),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const AegisLogo(size: 32, showText: false),
+            StatusPill(label: label, dotColor: AppColors.accent),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ProgressBadge(streak: _streak, xp: _xp),
+        ),
       ],
     );
   }

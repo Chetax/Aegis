@@ -18,6 +18,7 @@ from app.rag.store import get_collection
 _STORY_MODEL_ID = os.getenv(
     "BEDROCK_STORY_MODEL_ID", "us.amazon.nova-micro-v1:0"
 )
+_story_cache: dict[str, dict] = {}
 
 _story_llm = ChatBedrock(
     model_id=_STORY_MODEL_ID,
@@ -66,7 +67,14 @@ OUTPUT FORMAT: Return ONLY valid JSON, no prose before or after:
 }
 
 Exactly 4 scenes. Exactly 3 red flags. Exactly 4 quiz options.
-Icons MUST be from: phone, alert, money, shield, person, document."""
+Icons MUST be from: phone, alert, money, shield, person, document.
+
+IMPORTANT: The example above shows the JSON SHAPE only. Never reuse its
+exact wording. Write a question, options, and explanation that are
+specific to the red flags in THIS story — do not copy "Which of these is
+ALSO a scam warning sign?" or any other example phrasing verbatim.
+
+"""
 
 
 def _fallback_story(rule: dict[str, Any]) -> dict[str, Any]:
@@ -115,6 +123,12 @@ def _fallback_story(rule: dict[str, Any]) -> dict[str, Any]:
         },
     }
 
+def get_daily_story(country_code: str = "IN") -> dict:
+    key = f"{country_code}:{date.today().isoformat()}"
+    if key not in _story_cache:
+        _story_cache.clear()  # drop yesterday's entry, keep memory small
+        _story_cache[key] = generate_daily_story(country_code)
+    return _story_cache[key]
 
 def _pick_rule_for_today(country_code: str = "IN") -> dict[str, Any] | None:
     """Deterministic daily rotation — same rule all day, new tomorrow."""
@@ -179,6 +193,7 @@ def generate_daily_story(country_code: str = "IN") -> dict[str, Any]:
         parsed["category"] = rule["category"]
         parsed["source"] = rule.get("source")
         parsed["source_url"] = rule.get("source_url")
+        parsed["red_flags"]=parsed["red_flags"][:3]
         return parsed
     except Exception as e:
         print(f"[story] Bedrock generation failed, using fallback: {e}")
