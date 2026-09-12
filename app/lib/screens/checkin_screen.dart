@@ -25,7 +25,8 @@ class QAExchange {
 }
 
 class CheckinScreen extends StatefulWidget {
-  const CheckinScreen({super.key});
+  final bool active;
+  const CheckinScreen({super.key, required this.active});
   @override
   State<CheckinScreen> createState() => _CheckinScreenState();
 }
@@ -41,16 +42,32 @@ class _CheckinScreenState extends State<CheckinScreen> {
   String _errorText = '';
   final List<QAExchange> _history = [];
   String? _pendingAnswer;
+   bool _hasConnected = false;
 
   @override
   void initState() {
     super.initState();
-    _connect();
+    if (widget.active) {
+      _connect();
+      _hasConnected = true;
+    }
   }
 
   void _connect() {
     _service = CheckinSocketService('ws://10.0.2.2:8000', const Uuid().v4());
     _service.frames.listen(_onFrame);
+  }
+
+  @override
+  void didUpdateWidget(covariant CheckinScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Connect the first time the tab is actually opened — but never
+    // disconnect on leaving, so an in-progress check-in isn't killed
+    // if the user peeks at Home or Learn mid-flow.
+    if (widget.active && !_hasConnected) {
+      _connect();
+      _hasConnected = true;
+    }
   }
 
   void _onFrame(CheckinFrame frame) {
@@ -86,6 +103,8 @@ class _CheckinScreenState extends State<CheckinScreen> {
     };
     if (xpAward > 0) {
       await _progress.addXp(xpAward);
+      await _progress.recordActivity(type: 'checkin', xp: xpAward);
+      _progress.syncEventToBackend(type: 'checkin', xp: xpAward); 
     }
   }
 
