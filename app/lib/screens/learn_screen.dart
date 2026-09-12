@@ -1,7 +1,7 @@
 // lib/screens/learn_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+import '../services/polly_tts_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../model/daily_story.dart';
 import '../services/story_service.dart';
@@ -12,14 +12,15 @@ import '../widgets/aegis_widgets.dart';
 enum LearnPhase { loading, story, flags, quiz, complete, error }
 
 class LearnScreen extends StatefulWidget {
-  const LearnScreen({super.key});
+  final bool active;
+  const LearnScreen({super.key, required this.active});
   @override
   State<LearnScreen> createState() => _LearnScreenState();
 }
 
 class _LearnScreenState extends State<LearnScreen> {
   final _service = StoryService();
-  final _tts = FlutterTts();
+  final _tts = PollyTtsService();
   final _progress = ProgressService();
 
   LearnPhase _phase = LearnPhase.loading;
@@ -36,7 +37,6 @@ class _LearnScreenState extends State<LearnScreen> {
   @override
   void initState() {
     super.initState();
-    _initTts();
     _loadProgress();
     _load();
   }
@@ -49,37 +49,6 @@ class _LearnScreenState extends State<LearnScreen> {
       _streak = streak;
       _xp = xp;
     });
-  }
-
-  Future<void> _initTts() async {
-    await _tts.setLanguage('en-US');
-    await _tts.setSpeechRate(0.5);
-    await _tts.setPitch(1.0);
-    await _tts.setVolume(1.0);
-    await _tts.awaitSpeakCompletion(true);
-
-    try {
-      final voices = await _tts.getVoices;
-      if (voices is List) {
-        final preferred = voices.firstWhere(
-          (v) => v is Map &&
-              v['locale']?.toString().startsWith('en-') == true &&
-              v['name']?.toString().contains('network') == true,
-          orElse: () => voices.firstWhere(
-            (v) => v is Map && v['locale']?.toString().startsWith('en-') == true,
-            orElse: () => null,
-          ),
-        );
-        if (preferred != null) {
-          await _tts.setVoice({
-            "name": preferred['name'],
-            "locale": preferred['locale'],
-          });
-        }
-      }
-    } catch (e) {
-      // Voice selection failed — that's fine, use default.
-    }
   }
 
   Future<void> _load() async {
@@ -97,20 +66,12 @@ class _LearnScreenState extends State<LearnScreen> {
       });
     }
   }
-  bool _isSpeaking = false;
+
 
   Future<void> _speakCurrentScene() async {
-  if (_story == null || _isSpeaking) return;
-  _isSpeaking = true;
-  try {
-    await _tts.stop();
-    final result = await _tts.speak(_story!.scenes[_currentScene].text);
-    debugPrint('TTS speak() returned: $result');
-  } catch (e) {
-    debugPrint('TTS error: $e');
-  } finally {
-    _isSpeaking = false; // ALWAYS resets, even if something above threw
-  }
+  if (!widget.active) return;
+  if (_story == null) return;
+  await _tts.speak(_story!.scenes[_currentScene].text, language: 'en');
 }
 
   void _nextScene() {
@@ -141,7 +102,10 @@ class _LearnScreenState extends State<LearnScreen> {
   Future<void> _finish() async {
   if (!await _progress.completedToday()) {
     final isCorrect = _selectedAnswer == _story!.quiz.correctIndex;
-    await _progress.addXp(isCorrect ? 25 : 15); // quiz + completion, combined
+    final awarded = isCorrect ? 25 : 15;
+    await _progress.addXp(awarded);                              
+    await _progress.recordActivity(type: 'lesson', xp: awarded);
+    _progress.syncEventToBackend(type: 'lesson', xp: awarded);
     final newStreak = await _progress.markTodayActive();
     if (mounted) setState(() => _streak = newStreak);
   }
@@ -152,6 +116,15 @@ class _LearnScreenState extends State<LearnScreen> {
     _phase = LearnPhase.complete;
   });
 }
+  @override
+  void didUpdateWidget(covariant LearnScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active && !widget.active) {
+      _tts.stop();
+    } else if (!oldWidget.active && widget.active && _phase == LearnPhase.story) {
+      _speakCurrentScene();
+    }
+  }
 
   @override
   void dispose() {
