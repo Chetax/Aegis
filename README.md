@@ -34,18 +34,18 @@ Everything works by voice, in Hindi or English, and there's no login required to
 
 Not every idea here gets equal build time — prioritized against the hackathon's actual "genuinely helps someone learn" brief, and against what's provably useful versus merely plausible-sounding.
 
-| Feature | Status |
-|---|---|
-| Real-time "should I do this?" check-in | **Core — build first** |
-| Teach-back after check-in | **Core — build first** (flagship learning mechanic) |
-| Rules & regulations dictionary | **Core — build first** (grounds everything else) |
-| Daily voice-first scam story | **Build early** |
-| "Spot the red flag" mini-quiz | **Build early** |
-| Adaptive story/quiz selection (spaced repetition) | **Build if time permits** |
-| Weekly progress insight | **Build if time permits** |
-| Trusted-contact escalation | **Stretch** |
-| Hybrid online/offline AI | **Stretch** |
-| Practice scam call (roleplay sandbox) | **Backlog — build last, only if time allows, and validated with a real test user first.** Simulated-attack engagement is a known problem in phishing-training research: people behave differently once they know it's a test, real or not. Worth testing on a real person before trusting it as a core feature rather than assuming it works. |
+| Feature | Priority | Build Status |
+|---|---|---|
+| Real-time "should I do this?" check-in | **Core — build first** | ✅ Done — voice-first check-in graph, verdict + reporting flow, verified end-to-end |
+| Teach-back after check-in | **Core — build first** (flagship learning mechanic) | ✅ Done — graded, XP-linked, verified |
+| Rules & regulations dictionary | **Core — build first** (grounds everything else) | 🟡 Sourced rules power the check-in's RAG retrieval; a standalone browsable dictionary screen is not yet built |
+| Daily voice-first scam story | **Build early** | ✅ Done — narrated (AWS Polly, neural voice), English content verified; Hindi story content not yet generated |
+| "Spot the red flag" mini-quiz | **Build early** | ✅ Done |
+| Progress tracking (XP, streaks, daily/weekly history) | **Build if time permits** | ✅ Done, ahead of plan — local + DynamoDB-backed, streaks/longest-streak/weekly-monthly breakdown |
+| Adaptive story/quiz selection (spaced repetition) | **Build if time permits** | ⬜ Not started |
+| Trusted-contact escalation | **Stretch** | ⬜ Not started |
+| Hybrid online/offline AI | **Stretch** | ⬜ Not started |
+| Practice scam call (roleplay sandbox) | **Backlog — build last, only if time allows, and validated with a real test user first.** Simulated-attack engagement is a known problem in phishing-training research: people behave differently once they know it's a test, real or not. Worth testing on a real person before trusting it as a core feature rather than assuming it works. | ⬜ Not started |
 
 ## Value Addition
 
@@ -59,12 +59,13 @@ Not every idea here gets equal build time — prioritized against the hackathon'
 
 ## Tech Stack
 
-- **Mobile:** Flutter — voice input/output via device-native speech recognition and TTS, offline local caching, anonymous device-based identity by default
+- **Mobile:** Flutter — voice input via device-native speech recognition, voice output via AWS Polly (neural bilingual Hindi/Indian-English voice), anonymous device-based identity by default
 - **Backend:** FastAPI
 - **AI reasoning:** Claude (via AWS Bedrock), orchestrated with LangGraph for the check-in and teach-back conversation flows
 - **Knowledge retrieval:** RAG over a sourced, country-scoped rules dictionary (ChromaDB)
-- **Offline fallback:** Lightweight quantized on-device model (LoRA fine-tuned) for when there's no connectivity
-- **Storage:** PostgreSQL for progress/history, cached content for offline access; optional phone-number linkage for progress recovery across devices
+- **Voice synthesis:** AWS Polly (Kajal neural voice — bilingual Hindi + Indian English)
+- **Storage:** DynamoDB for progress/history (XP, streaks, daily activity), local on-device caching as the primary read path so the app never depends on network availability for its own numbers
+- **Planned, not yet built:** offline fallback via a lightweight quantized on-device model (LoRA fine-tuned) for no-connectivity use; optional login/phone-number linkage for cross-device progress recovery
 
 ## Scope Boundaries
 

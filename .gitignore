@@ -9,6 +9,7 @@ app/.pub-cache/
 backend/venv/
 backend/__pycache__/
 backend/**/__pycache__/
+dynamodb-data/
 *.pyc
 
 # Env
