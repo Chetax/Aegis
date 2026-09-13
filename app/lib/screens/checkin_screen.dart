@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/aegis_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/polly_tts_service.dart';
+import '../config.dart';
 
 enum CheckinPhase { idle, connecting, question, done, error }
 
@@ -78,6 +79,7 @@ Future<void> _checkLocales() async {
   setState(() => _isListening = true);
   await _speech.startListening(
     onResult: (text, isFinal) {
+      if (!_isListening) return;
       setState(() => _inputController.text = text);
       if (isFinal) setState(() => _isListening = false);
     },
@@ -85,7 +87,7 @@ Future<void> _checkLocales() async {
 }
 
   void _connect() {
-    _service = CheckinSocketService('ws://10.0.2.2:8000', const Uuid().v4());
+    _service = CheckinSocketService(AppConfig.wsBase, const Uuid().v4());
     _service.frames.listen(_onFrame);
   }
 
@@ -109,6 +111,8 @@ Future<void> _checkLocales() async {
     setState(() {
       switch (frame) {
         case QuestionFrame():
+          _speech.stopListening(); 
+          _isListening = false;     
           _commitPendingAnswer();
           _phase = CheckinPhase.question;
           _currentQuestion = frame;
@@ -192,7 +196,11 @@ Future<void> _speakVerdict(DoneFrame frame) async {
 
   void _submitInitial() {
     if (_inputController.text.trim().isEmpty) return;
-    setState(() => _phase = CheckinPhase.connecting);
+    _speech.stopListening(); 
+    setState(() {
+    _isListening = false;           
+    _phase = CheckinPhase.connecting;
+  });
     _service.start(_inputController.text.trim());
     _inputController.clear();
   }
@@ -200,6 +208,8 @@ Future<void> _speakVerdict(DoneFrame frame) async {
   void _submitAnswer() {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
+    _speech.stopListening(); 
+    setState(() => _isListening = false); 
     _pendingAnswer = text;
     _service.answer(text);
   }
