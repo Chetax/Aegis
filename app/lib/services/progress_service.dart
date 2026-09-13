@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import '../config.dart'; 
 
 /// One day's activity, for the Profile screen's weekly strip / monthly totals.
 class DayActivity {
@@ -25,7 +26,6 @@ class ProgressService {
   static const _kLastActive = 'last_active_date';
   static const _kActivity = 'daily_activity';
   static const _kDeviceId = 'device_id';
-  static const _backendBase = 'http://10.0.2.2:8000';
 
   // --- Unchanged from before ---
 
@@ -95,7 +95,7 @@ class ProgressService {
     final deviceId = await getDeviceId();
     await http
         .post(
-          Uri.parse('$_backendBase/stats/event'),
+          Uri.parse('${AppConfig.httpBase}/stats/event'),
           headers: {'Content-Type': 'application/json'},
           body: '{"device_id":"$deviceId","type":"$type","xp":$xp}',
         )

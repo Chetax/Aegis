@@ -197,7 +197,8 @@ class _LearnScreenState extends State<LearnScreen> {
     final scene = _story!.scenes[_currentScene];
     final isLast = _currentScene == _story!.scenes.length - 1;
 
-    return Column(
+    return SingleChildScrollView(
+      child:Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildHeader('TODAY\'S STORY'),
@@ -328,7 +329,7 @@ class _LearnScreenState extends State<LearnScreen> {
           icon: isLast ? Icons.flag : Icons.arrow_forward,
         ),
       ],
-    );
+   ));
   }
 
   // ---------- RED FLAGS ----------

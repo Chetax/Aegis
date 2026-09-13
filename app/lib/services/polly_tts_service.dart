@@ -4,13 +4,13 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import '../config.dart';
 
 /// Downloads Polly-synthesized speech from the backend and plays it.
 /// Narration is an enhancement — every failure here is swallowed, never
 /// surfaced to the user, matching the fail-soft pattern used everywhere
 /// else in this app.
 class PollyTtsService {
-  static const _backendBase = 'http://10.0.2.2:8000';
   final AudioPlayer _player = AudioPlayer();
   int _requestSeq = 0;
 
@@ -20,7 +20,7 @@ class PollyTtsService {
     try {
       final resp = await http
           .post(
-            Uri.parse('$_backendBase/tts/synthesize'),
+            Uri.parse('${AppConfig.httpBase}/tts/synthesize'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'text': text, 'language': language}),
           )

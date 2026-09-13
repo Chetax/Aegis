@@ -2,13 +2,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../model/daily_story.dart';
+import '../config.dart';
 
 class StoryService {
   // Same emulator-host mapping as the WebSocket.
-  static const _base = 'http://10.0.2.2:8000';
 
   Future<DailyStory> fetchDaily() async {
-    final resp = await http.get(Uri.parse('$_base/story/daily'));
+    final resp = await http.get(Uri.parse('${AppConfig.httpBase}/story/daily'));
     if (resp.statusCode != 200) {
       throw Exception('Story fetch failed: ${resp.statusCode}');
     }
