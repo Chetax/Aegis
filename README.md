@@ -42,7 +42,9 @@ Not every idea here gets equal build time — prioritized against the hackathon'
 | Daily voice-first scam story | **Build early** | ✅ Done — narrated (AWS Polly, neural voice), English content verified; Hindi story content not yet generated |
 | "Spot the red flag" mini-quiz | **Build early** | ✅ Done |
 | Progress tracking (XP, streaks, daily/weekly history) | **Build if time permits** | ✅ Done, ahead of plan — local + DynamoDB-backed, streaks/longest-streak/weekly-monthly breakdown |
+| "Verify This Yourself" — real government tools (Sanchar Saathi/TAFCOP, UIDAI) to independently check claims made in a scam call | **Build if time permits** | ⬜ Not started — planned as part of the rules dictionary screen |
 | Adaptive story/quiz selection (spaced repetition) | **Build if time permits** | ⬜ Not started |
+| Additional prompt-injection defense layer (AWS Bedrock Guardrails) | **Stretch** | ⬜ Not started |
 | Trusted-contact escalation | **Stretch** | ⬜ Not started |
 | Hybrid online/offline AI | **Stretch** | ⬜ Not started |
 | Practice scam call (roleplay sandbox) | **Backlog — build last, only if time allows, and validated with a real test user first.** Simulated-attack engagement is a known problem in phishing-training research: people behave differently once they know it's a test, real or not. Worth testing on a real person before trusting it as a core feature rather than assuming it works. | ⬜ Not started |
