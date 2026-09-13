@@ -1,4 +1,5 @@
 // lib/screens/checkin_screen.dart
+import 'package:app/services/speech_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,7 @@ import '../model/checkin_frame.dart';
 import '../theme/app_theme.dart';
 import '../widgets/aegis_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/polly_tts_service.dart';
 
 enum CheckinPhase { idle, connecting, question, done, error }
 
@@ -29,12 +31,17 @@ class CheckinScreen extends StatefulWidget {
   const CheckinScreen({super.key, required this.active});
   @override
   State<CheckinScreen> createState() => _CheckinScreenState();
+  
 }
 
 class _CheckinScreenState extends State<CheckinScreen> {
   late CheckinSocketService _service;
   final _inputController = TextEditingController();
   final _progress = ProgressService();
+  final _speech = SpeechService();
+  final _pollyTts = PollyTtsService(); 
+  bool _speechReady = false;
+  bool _isListening = false;
 
   CheckinPhase _phase = CheckinPhase.idle;
   QuestionFrame? _currentQuestion;
@@ -45,13 +52,37 @@ class _CheckinScreenState extends State<CheckinScreen> {
    bool _hasConnected = false;
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.active) {
-      _connect();
-      _hasConnected = true;
-    }
+void initState() {
+  super.initState();
+  if (widget.active) {
+    _connect();
+    _hasConnected = true;
   }
+  _speech.init().then((ok) {
+    if (mounted) setState(() => _speechReady = ok);
+  });
+  _checkLocales();   // fire-and-forget, runs after init kicks off
+}
+
+Future<void> _checkLocales() async {
+  final localeIds = await _speech.availableLocales();
+  print('[speech] available locales: $localeIds');
+}
+
+  Future<void> _toggleMic() async {
+  if (_isListening) {
+    await _speech.stopListening();
+    setState(() => _isListening = false);
+    return;
+  }
+  setState(() => _isListening = true);
+  await _speech.startListening(
+    onResult: (text, isFinal) {
+      setState(() => _inputController.text = text);
+      if (isFinal) setState(() => _isListening = false);
+    },
+  );
+}
 
   void _connect() {
     _service = CheckinSocketService('ws://10.0.2.2:8000', const Uuid().v4());
@@ -70,6 +101,10 @@ class _CheckinScreenState extends State<CheckinScreen> {
     }
   }
 
+  Future<void> _speakQuestion(QuestionFrame frame) async {
+  await _pollyTts.speak(frame.text, language: 'en');
+}
+
   void _onFrame(CheckinFrame frame) {
     setState(() {
       switch (frame) {
@@ -78,11 +113,13 @@ class _CheckinScreenState extends State<CheckinScreen> {
           _phase = CheckinPhase.question;
           _currentQuestion = frame;
           _inputController.clear();
+          _speakQuestion(frame);
         case DoneFrame():
           _commitPendingAnswer();
           _phase = CheckinPhase.done;
           _finalResult = frame;
-          _awardTeachBackXp(frame); // fire-and-forget, runs once per frame
+          _awardTeachBackXp(frame);
+          _speakVerdict(frame); // fire-and-forget, runs once per frame
         case ErrorFrame():
           _phase = CheckinPhase.error;
           _errorText = frame.text;
@@ -107,6 +144,22 @@ class _CheckinScreenState extends State<CheckinScreen> {
       _progress.syncEventToBackend(type: 'checkin', xp: xpAward); 
     }
   }
+
+  /// Speaks the verdict aloud once the check-in reaches a result. For
+/// high-risk verdicts, leads with a short, urgent spoken summary before
+/// the full detail — reading 4+ sentences cold to someone mid-panic is
+/// a lot; a short lead first matches how you'd actually talk to someone.
+Future<void> _speakVerdict(DoneFrame frame) async {
+  final risk = (frame.result['risk_level'] ?? 'low').toString().toLowerCase();
+  final verdict = (frame.result['verdict_text'] ?? '').toString();
+  if (verdict.isEmpty) return;
+
+  final textToSpeak = risk == 'high'
+      ? "Stop. Don't send money or share any information. $verdict"
+      : verdict;
+
+  await _pollyTts.speak(textToSpeak, language: 'en');
+}
 
   Future<void> _reportIt() async {
   final uri = Uri(scheme: 'tel', path: '1930');
@@ -152,6 +205,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
   }
 
   void _startNew() {
+    _pollyTts.stop();
     _service.dispose();
     setState(() {
       _phase = CheckinPhase.idle;
@@ -169,6 +223,8 @@ class _CheckinScreenState extends State<CheckinScreen> {
   void dispose() {
     _inputController.dispose();
     _service.dispose();
+    _speech.cancel(); 
+    _pollyTts.stop();
     super.dispose();
   }
 
@@ -211,59 +267,77 @@ class _CheckinScreenState extends State<CheckinScreen> {
   }
 
   // ---------- IDLE ----------
-  Widget _buildIdle() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 20),
-        const Center(child: AegisLogo(size: 96)),
-        const SizedBox(height: 12),
-        const Center(
-          child: StatusPill(
-            label: 'SECURED CONNECTION',
-            dotColor: AppColors.accent,
+
+    Widget _buildIdle() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 20),
+          const Center(child: AegisLogo(size: 96)),
+          const SizedBox(height: 12),
+          const Center(
+            child: StatusPill(
+              label: 'SECURED CONNECTION',
+              dotColor: AppColors.accent,
+            ),
           ),
-        ),
-        const SizedBox(height: 40),
-        Text(
-          'What happened?',
-          style: GoogleFonts.inter(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+          const SizedBox(height: 40),
+          Text(
+            'What happened?',
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Describe the call, message, or situation. I\'ll check it against known scam patterns.',
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            height: 1.5,
-            color: AppColors.textSecondary,
+          const SizedBox(height: 8),
+          Text(
+            'Describe the call, message, or situation. I\'ll check it against known scam patterns.',
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              height: 1.5,
+              color: AppColors.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        TextField(
-          controller: _inputController,
-          maxLines: 6,
-          style: GoogleFonts.inter(fontSize: 17, color: AppColors.textPrimary),
-          decoration: const InputDecoration(
-            hintText: 'e.g. Someone called saying they\'re from the police...',
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _inputController,
+                  maxLines: 6,
+                  style: GoogleFonts.inter(fontSize: 17, color: AppColors.textPrimary),
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Someone called saying they\'re from the police...',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton(
+                onPressed: _speechReady ? _toggleMic : null,
+                icon: Icon(
+                  _isListening ? Icons.mic : Icons.mic_none,
+                  color: _isListening ? AppColors.riskHigh : AppColors.accent,
+                ),
+                tooltip: _speechReady ? 'Speak instead of typing' : 'Microphone unavailable',
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 20),
-        PrimaryButton(
-          onPressed: _submitInitial,
-          label: 'Check This',
-          icon: Icons.security,
-        ),
-        const SizedBox(height: 24),
-      ]
-          .animate(interval: 60.ms)
-          .fadeIn(duration: 400.ms)
-          .slideY(begin: 0.1, end: 0),
-    );
-  }
+          const SizedBox(height: 20),
+          PrimaryButton(
+            onPressed: _submitInitial,
+            label: 'Check This',
+            icon: Icons.security,
+          ),
+          const SizedBox(height: 24),
+        ]
+            .animate(interval: 60.ms)
+            .fadeIn(duration: 400.ms)
+            .slideY(begin: 0.1, end: 0),
+      );
+}
+
 
   // ---------- CONNECTING ----------
   Widget _buildConnecting() {
@@ -302,57 +376,73 @@ class _CheckinScreenState extends State<CheckinScreen> {
 
   // ---------- QUESTION ----------
   Widget _buildQuestion() {
-    final isTeachBack = _currentQuestion!.field == 'user_explanation';
-    final label = isTeachBack ? 'TEACH-BACK' : 'CLARIFICATION';
-    final dotColor = isTeachBack ? AppColors.riskLow : AppColors.accent;
+  final isTeachBack = _currentQuestion!.field == 'user_explanation';
+  final label = isTeachBack ? 'TEACH-BACK' : 'CLARIFICATION';
+  final dotColor = isTeachBack ? AppColors.riskLow : AppColors.accent;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const AegisLogo(size: 36, showText: false),
-            StatusPill(label: label, dotColor: dotColor),
-          ],
-        ),
-        const SizedBox(height: 20),
-        if (_history.isNotEmpty) ...[
-          ..._history.map((qa) => _buildHistoryItem(qa)),
-          const SizedBox(height: 8),
-          Container(height: 1, color: AppColors.border),
-          const SizedBox(height: 20),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const SizedBox(height: 12),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const AegisLogo(size: 36, showText: false),
+          StatusPill(label: label, dotColor: dotColor),
         ],
-        Text(
-          _currentQuestion!.text,
-          style: GoogleFonts.inter(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-            height: 1.35,
+      ),
+      const SizedBox(height: 20),
+      if (_history.isNotEmpty) ...[
+        ..._history.map((qa) => _buildHistoryItem(qa)),
+        const SizedBox(height: 8),
+        Container(height: 1, color: AppColors.border),
+        const SizedBox(height: 20),
+      ],
+      Text(
+        _currentQuestion!.text,
+        style: GoogleFonts.inter(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+          height: 1.35,
+        ),
+      ),
+      const SizedBox(height: 20),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _inputController,
+              maxLines: 4,
+              style: GoogleFonts.inter(fontSize: 17, color: AppColors.textPrimary),
+              decoration: const InputDecoration(hintText: 'Your answer...'),
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        TextField(
-          controller: _inputController,
-          maxLines: 4,
-          style: GoogleFonts.inter(fontSize: 17, color: AppColors.textPrimary),
-          decoration: const InputDecoration(hintText: 'Your answer...'),
-        ),
-        const SizedBox(height: 20),
-        PrimaryButton(
-          onPressed: _submitAnswer,
-          label: 'Send',
-          icon: Icons.arrow_forward,
-        ),
-        const SizedBox(height: 24),
-      ]
-          .animate(interval: 40.ms)
-          .fadeIn(duration: 300.ms)
-          .slideX(begin: 0.05, end: 0),
-    );
-  }
+          const SizedBox(width: 10),
+          IconButton(
+            onPressed: _speechReady ? _toggleMic : null,
+            icon: Icon(
+              _isListening ? Icons.mic : Icons.mic_none,
+              color: _isListening ? AppColors.riskHigh : AppColors.accent,
+            ),
+            tooltip: _speechReady ? 'Speak instead of typing' : 'Microphone unavailable',
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+      PrimaryButton(
+        onPressed: _submitAnswer,
+        label: 'Send',
+        icon: Icons.arrow_forward,
+      ),
+      const SizedBox(height: 24),
+    ]
+        .animate(interval: 40.ms)
+        .fadeIn(duration: 300.ms)
+        .slideX(begin: 0.05, end: 0),
+  );
+}
 
   Widget _buildHistoryItem(QAExchange qa) {
     return Padding(
