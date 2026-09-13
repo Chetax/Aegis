@@ -193,6 +193,11 @@ may be elderly, anxious, or not tech-savvy — never condescending, never harsh)
 - If partial or off_track: gently restate the key point. Do not scold. Do not add
   new scam mechanics.
 
+When genuinely unsure between "partial" and "off_track", choose "partial" —
+a vague-but-not-wrong instinct (e.g. "something felt off") should never be
+scored the same as a real misunderstanding. Reserve "off_track" for answers
+that are actually incorrect or off-topic, not just underspecified.
+
 Output ONLY valid JSON, nothing else — no preamble, no markdown fences:
 {{"grade_result": "correct" | "partial" | "off_track", "grade_feedback": "<one short sentence>"}}
 """

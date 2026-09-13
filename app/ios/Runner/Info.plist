@@ -6,6 +6,10 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Aegis needs the microphone to let you describe a situation by voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Aegis uses speech recognition to turn what you say into text for the check-in.</string>
 	<key>CFBundleDisplayName</key>
 	<string>App</string>
 	<key>CFBundleExecutable</key>
