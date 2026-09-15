@@ -43,6 +43,8 @@ class _CheckinScreenState extends State<CheckinScreen> {
   final _pollyTts = PollyTtsService(); 
   bool _speechReady = false;
   bool _isListening = false;
+  String _sttLocale = 'en_US'; // 'en_US' | 'hi_IN'
+  String get _sessionLanguage => _sttLocale == 'hi_IN' ? 'hi' : 'en';
 
   CheckinPhase _phase = CheckinPhase.idle;
   QuestionFrame? _currentQuestion;
@@ -63,7 +65,23 @@ void initState() {
     if (mounted) setState(() => _speechReady = ok);
   });
   _checkLocales();   // fire-and-forget, runs after init kicks off
+  _loadLanguagePref();
 }
+
+  /// Re-reads the Profile language setting and applies it to STT/session
+  /// language. NOT just called once in initState — CheckinScreen lives
+  /// inside MainScaffold's IndexedStack, so it's created once and never
+  /// rebuilt; without re-reading this here, a language change made in
+  /// Profile after app launch would never reach an already-alive
+  /// CheckinScreen until the whole app was restarted. Called again
+  /// whenever the tab is (re)opened and whenever a new check-in starts,
+  /// so it's always the CURRENT Profile setting, while still staying
+  /// fixed for the duration of any one in-progress conversation (no
+  /// toggle mid-flow).
+  Future<void> _loadLanguagePref() async {
+    final lang = await _progress.getLanguage();
+    if (mounted) setState(() => _sttLocale = lang == 'hi' ? 'hi_IN' : 'en_US');
+  }
 
 Future<void> _checkLocales() async {
   final localeIds = await _speech.availableLocales();
@@ -78,6 +96,7 @@ Future<void> _checkLocales() async {
   }
   setState(() => _isListening = true);
   await _speech.startListening(
+    localeId: _sttLocale,
     onResult: (text, isFinal) {
       if (!_isListening) return;
       setState(() => _inputController.text = text);
@@ -101,10 +120,16 @@ Future<void> _checkLocales() async {
       _connect();
       _hasConnected = true;
     }
+    // Every time the user (re)opens this tab while idle (not mid-
+    // conversation), pick up whatever language Profile currently says —
+    // covers switching languages in Profile then coming back here.
+    if (widget.active && !oldWidget.active && _phase == CheckinPhase.idle) {
+      _loadLanguagePref();
+    }
   }
 
   Future<void> _speakQuestion(QuestionFrame frame) async {
-  await _pollyTts.speak(frame.text, language: 'en');
+  await _pollyTts.speak(frame.text, language: _sessionLanguage);
 }
 
   void _onFrame(CheckinFrame frame) {
@@ -162,7 +187,7 @@ Future<void> _speakVerdict(DoneFrame frame) async {
       ? "Stop. Don't send money or share any information. $verdict"
       : verdict;
 
-  await _pollyTts.speak(textToSpeak, language: 'en');
+  await _pollyTts.speak(textToSpeak, language: _sessionLanguage);
 }
 
   Future<void> _reportIt() async {
@@ -201,7 +226,7 @@ Future<void> _speakVerdict(DoneFrame frame) async {
     _isListening = false;           
     _phase = CheckinPhase.connecting;
   });
-    _service.start(_inputController.text.trim());
+    _service.start(_inputController.text.trim(), language: _sessionLanguage);
     _inputController.clear();
   }
 
@@ -227,6 +252,9 @@ Future<void> _speakVerdict(DoneFrame frame) async {
       _pendingAnswer = null;
     });
     _connect();
+    // Pick up any Profile language change made since this conversation
+    // started, before the next one begins.
+    _loadLanguagePref();
   }
 
   @override
@@ -602,16 +630,23 @@ Future<void> _speakVerdict(DoneFrame frame) async {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            // BUG FIX: was a plain Row with an unbounded Text — "OFF_TRACK"
+            // (longer than CORRECT/PARTIAL) plus letterSpacing pushed it
+            // past the container width, causing a right-overflow banner.
+            // Wrapping in Expanded lets it wrap to a second line instead.
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.school_outlined, color: color, size: 20),
               const SizedBox(width: 8),
-              Text(
-                'Your Understanding: ${grade.toUpperCase()}',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                  letterSpacing: 1.2,
+              Expanded(
+                child: Text(
+                  'Your Understanding: ${grade.toUpperCase()}',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                    letterSpacing: 1.2,
+                  ),
                 ),
               ),
             ],

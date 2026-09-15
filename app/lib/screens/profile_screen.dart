@@ -20,6 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _longestStreak = 0;
   List<DayActivity> _week = [];
   Map<String, int> _month = {'lessons': 0, 'checkins': 0, 'xp': 0};
+  String _language = 'en';
 
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final longest = await _progress.getLongestStreak();
     final week = await _progress.getLastNDays(7);
     final month = await _progress.getMonthSummary();
+    final language = await _progress.getLanguage();
     if (!mounted) return;
     setState(() {
       _xp = xp;
@@ -41,8 +43,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _week = week;
       _month = month;
       _loading = false;
+      _language = language;
     });
   }
+  
+  Future<void> _setLanguage(String lang) async {
+  await _progress.setLanguage(lang);
+  if (!mounted) return;
+  setState(() => _language = lang);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +81,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _TotalsCard(xp: _xp, streak: _streak, longestStreak: _longestStreak)
                         .animate().fadeIn(duration: 350.ms),
                     const SizedBox(height: 28),
+                    const SizedBox(height: 28),
+                    Text('CHECK-IN LANGUAGE',
+                        style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted, letterSpacing: 1.2)),
+                    const SizedBox(height: 12),
+                    _LanguageSelector(selected: _language, onSelect: _setLanguage)
+                        .animate(delay: 100.ms).fadeIn(duration: 350.ms),
                     Text('LAST 7 DAYS',
                         style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted, letterSpacing: 1.2)),
                     const SizedBox(height: 12),
@@ -141,6 +156,57 @@ class _MiniStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(label, style: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppColors.textMuted)),
       ],
+    );
+  }
+}
+
+class _LanguageSelector extends StatelessWidget {
+  final String selected;
+  final void Function(String) onSelect;
+  const _LanguageSelector({required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: _LangOption(label: 'English', code: 'en', selected: selected == 'en', onTap: () => onSelect('en'))),
+        const SizedBox(width: 12),
+        Expanded(child: _LangOption(label: 'हिन्दी', code: 'hi', selected: selected == 'hi', onTap: () => onSelect('hi'))),
+      ],
+    );
+  }
+}
+
+class _LangOption extends StatelessWidget {
+  final String label;
+  final String code;
+  final bool selected;
+  final VoidCallback onTap;
+  const _LangOption({required this.label, required this.code, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accent.withOpacity(0.15) : AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? AppColors.accent : AppColors.border, width: selected ? 2 : 1),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: selected ? AppColors.accent : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

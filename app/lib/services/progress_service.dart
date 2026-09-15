@@ -26,6 +26,7 @@ class ProgressService {
   static const _kLastActive = 'last_active_date';
   static const _kActivity = 'daily_activity';
   static const _kDeviceId = 'device_id';
+  static const _kLanguage = 'app_language'; // 'en' | 'hi'
 
   // --- Unchanged from before ---
 
@@ -191,6 +192,16 @@ class ProgressService {
       await prefs.setString(_kDeviceId, id);
     }
     return id;
+  }
+
+  Future<String> getLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kLanguage) ?? 'en';
+  }
+
+  Future<void> setLanguage(String language) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kLanguage, language);
   }
 
   String _dateKey(DateTime d) =>
