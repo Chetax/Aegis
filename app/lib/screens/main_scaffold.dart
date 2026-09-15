@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import 'checkin_screen.dart';
+import 'dictionary_screen.dart';
 import 'home_screen.dart';
 import 'learn_screen.dart';
 
@@ -29,6 +30,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           HomeScreen(active: _index == 0, onNavigate: _goTo),
           LearnScreen(active: _index == 1),
           CheckinScreen(active: _index == 2),
+          const DictionaryScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -45,6 +47,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home', selected: _index == 0, onTap: () => _goTo(0)),
                 _NavItem(icon: Icons.menu_book_outlined, activeIcon: Icons.menu_book, label: 'Learn', selected: _index == 1, onTap: () => _goTo(1)),
                 _NavItem(icon: Icons.shield_outlined, activeIcon: Icons.shield, label: 'Check-In', selected: _index == 2, onTap: () => _goTo(2)),
+                _NavItem(icon: Icons.gavel_outlined, activeIcon: Icons.gavel, label: 'Rules', selected: _index == 3, onTap: () => _goTo(3)),
               ],
             ),
           ),
