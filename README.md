@@ -3,6 +3,11 @@
 **An AI companion that trains people to recognize and respond to scams — before they happen.**
 
 
+
+https://github.com/user-attachments/assets/5d37d110-3799-44e2-8156-1961af60b206
+
+
+
 ---
 
 ## The Problem
