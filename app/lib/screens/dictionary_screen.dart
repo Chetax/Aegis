@@ -7,8 +7,39 @@ import '../model/rule_entry.dart';
 import '../services/rules_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/aegis_widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum DictionaryPhase { loading, loaded, error }
+
+class _VerifyTool {
+  final String name;
+  final String description;
+  final String url;
+  final IconData icon;
+  const _VerifyTool({
+    required this.name,
+    required this.description,
+    required this.url,
+    required this.icon,
+  });
+}
+
+const _verifyTools = <_VerifyTool>[
+  _VerifyTool(
+    name: 'Sanchar Saathi (TAFCOP)',
+    description:
+        'Check every mobile number registered in your name, and report or block any you don\'t recognize. Directly checks the "your SIM is being misused" claim scammers make.',
+    url: 'https://sancharsaathi.gov.in/',
+    icon: Icons.sim_card_outlined,
+  ),
+  _VerifyTool(
+    name: 'UIDAI — Aadhaar Services',
+    description:
+        'Verify your Aadhaar details and authentication history directly with the issuing authority. Useful when a caller claims your Aadhaar is linked to a crime.',
+    url: 'https://uidai.gov.in/',
+    icon: Icons.badge_outlined,
+  ),
+];
 
 class DictionaryScreen extends StatefulWidget {
   const DictionaryScreen({super.key});
@@ -52,6 +83,71 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
       const SnackBar(content: Text('Source link copied')),
     );
   }
+  Future<void> _openTool(String url) async {
+  final uri = Uri.parse(url);
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open the link.')),
+    );
+  }
+}
+
+Widget _buildVerifyCard(_VerifyTool tool) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openTool(tool.url),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(tool.icon, size: 18, color: AppColors.accent),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(tool.name,
+                        style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    Text(tool.description,
+                        style: GoogleFonts.inter(
+                            fontSize: 13,
+                            height: 1.4,
+                            color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.open_in_new, size: 16, color: AppColors.textMuted),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +273,22 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 28),
+            Text(
+              'VERIFY THIS YOURSELF',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 11,
+                color: AppColors.textMuted,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Don\'t take a caller\'s word for it — check these official sources directly.',
+              style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            ..._verifyTools.map((t) => _buildVerifyCard(t)),
           const SizedBox(height: 20),
         ],
       ),
