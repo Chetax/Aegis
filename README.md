@@ -31,7 +31,7 @@ Aegis is a voice-first mobile companion built around two things working together
 1. **A real-time "should I do this?" check-in** — a single button. The user describes what's happening by voice, Aegis asks a few short clarifying questions, and gives a clear, conservative verdict plus a next step, grounded in real regulatory sources, not guesswork.
 2. **Teach-back** — right after the verdict, the user explains in their own words *why* the situation was risky. Aegis checks their reasoning and gently corrects it if needed. This is the actual learning moment — the user isn't just told an answer, they have to reconstruct it themselves, on a real situation they were genuinely unsure about.
 
-Around that core, daily bite-sized stories and active-recall quizzes build pattern recognition before anything ever happens for real, and a plain-language rules dictionary is always available to ask questions of directly.
+Around that core, daily bite-sized stories and active-recall quizzes build pattern recognition before anything ever happens for real, and a plain-language rules dictionary — with direct links to independently verify a caller's claims against real government tools — is always available to browse or search directly.
 
 Everything works by voice, in Hindi or English, and there's no login required to start — just open the app and speak. Login is entirely optional, offered only if and when the user wants to save their streak and progress so it isn't lost if they change phones — never a gate to using the app.
 
@@ -43,11 +43,11 @@ Not every idea here gets equal build time — prioritized against the hackathon'
 |---|---|---|
 | Real-time "should I do this?" check-in | **Core — build first** | ✅ Done — voice-first check-in graph, verdict + reporting flow, verified end-to-end |
 | Teach-back after check-in | **Core — build first** (flagship learning mechanic) | ✅ Done — graded, XP-linked, verified |
-| Rules & regulations dictionary | **Core — build first** (grounds everything else) | 🟡 Sourced rules power the check-in's RAG retrieval; a standalone browsable dictionary screen is not yet built |
+| Rules & regulations dictionary | **Core — build first** (grounds everything else) | ✅ Done — standalone browsable screen (expandable rule cards with source citations, emergency reporting banner, universal fallback patterns), plus powers the check-in's RAG retrieval |
 | Daily voice-first scam story | **Build early** | ✅ Done — narrated (AWS Polly, neural voice), English content verified; Hindi story content not yet generated |
 | "Spot the red flag" mini-quiz | **Build early** | ✅ Done |
 | Progress tracking (XP, streaks, daily/weekly history) | **Build if time permits** | ✅ Done, ahead of plan — local + DynamoDB-backed, streaks/longest-streak/weekly-monthly breakdown |
-| "Verify This Yourself" — real government tools (Sanchar Saathi/TAFCOP, UIDAI) to independently check claims made in a scam call | **Build if time permits** | ⬜ Not started — planned as part of the rules dictionary screen |
+| "Verify This Yourself" — real government tools (Sanchar Saathi/TAFCOP, UIDAI) to independently check claims made in a scam call | **Build if time permits** | ✅ Done, ahead of plan — added to the rules dictionary screen, linking out to Sanchar Saathi/TAFCOP and UIDAI's official portals |
 | Adaptive story/quiz selection (spaced repetition) | **Build if time permits** | ⬜ Not started |
 | Additional prompt-injection defense layer (AWS Bedrock Guardrails) | **Stretch** | ⬜ Not started |
 | Trusted-contact escalation | **Stretch** | ⬜ Not started |
@@ -62,6 +62,7 @@ Not every idea here gets equal build time — prioritized against the hackathon'
 - **Zero friction to start, progress that isn't lost.** No login is needed to begin using the app, and progress is saved locally by default — optional login exists purely to protect a user's streak/history if they get a new phone, never as a barrier to entry.
 - **Works with or without connectivity** — a hybrid online/offline design means the tool doesn't fail exactly when a low-income user is most likely to have a weak signal.
 - **Grounded in real, cited sources** — RBI advisories and the National Cyber Crime Reporting Portal, not invented legal facts, because getting this wrong is actively dangerous.
+- **Doesn't ask the user to just trust it.** The "Verify This Yourself" links let anyone independently check a caller's claims (a number, an Aadhaar link) against the real government source, rather than take Aegis's word for it either.
 - **Genuinely a learning product** — active recall, teach-back, and adaptive difficulty give it real pedagogical structure, not just a safety utility with a UI.
 
 ## Tech Stack
