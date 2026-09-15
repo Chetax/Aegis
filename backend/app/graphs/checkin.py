@@ -16,6 +16,7 @@ load_dotenv()
 from .prompts import (
     INTAKE_SYSTEM_PROMPT, INTAKE_EXAMPLES, CLARIFY_QUESTIONS,
     VERDICT_TEMPLATES, REPORTING_SUFFIX, GRADE_SYSTEM_PROMPT,
+    TEACH_BACK_QUESTION,
 )
 from ..rag.store import query_rules, get_by_category
 
@@ -273,12 +274,12 @@ def verdict(state: CheckinState) -> CheckinState:
 def teach_back(state: CheckinState) -> CheckinState:
     """Ask the teach-back question and pause for the user's own
     explanation — same interrupt pattern as clarify."""
-    question = "In your own words, why was this risky?"
+    lang = state.get("language", "en")
+    question = TEACH_BACK_QUESTION[lang]
     state["teach_back_question"] = question
     answer = interrupt({"question": question, "field": "user_explanation"})
     state["user_explanation"] = answer
     return state
-
 
 def grade(state: CheckinState) -> CheckinState:
     """Grade the user's teach-back explanation against the matched rule

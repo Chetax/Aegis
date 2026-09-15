@@ -162,6 +162,11 @@ REPORTING_SUFFIX = {
     "hi": "अगर आपने पहले ही कुछ ऐसा बता दिया है जो नहीं बताना चाहिए था, तो अभी रिपोर्ट करें: 1930 पर कॉल करें या cybercrime.gov.in पर जाएं।",
 }
 
+TEACH_BACK_QUESTION = {
+    "en": "In your own words, why was this risky?",
+    "hi": "अपने शब्दों में बताएं, यह जोखिम भरा क्यों था?",
+}
+
 # Used by the grade() node. Judges the user's teach-back explanation ONLY
 # against the reference (the matched rule, or — when no rule matched — the
 # manipulation principle that made it high risk). Fenced in so the LLM can't
