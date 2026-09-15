@@ -40,8 +40,8 @@ class SpeechService {
       onResult(r.recognizedWords, r.finalResult);
     },
     localeId: localeId,
-    listenFor: const Duration(seconds: 30),
-    pauseFor: const Duration(seconds: 5),
+    listenFor: const Duration(minutes: 3),
+    pauseFor: const Duration(seconds: 20),
     partialResults: true,
   );
 }

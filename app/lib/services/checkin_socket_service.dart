@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../model/checkin_frame.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// One instance of this class = one check-in conversation = one open socket.
 class CheckinSocketService {
