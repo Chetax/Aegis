@@ -94,12 +94,17 @@ Future<void> _checkLocales() async {
     setState(() => _isListening = false);
     return;
   }
+  await _pollyTts.stop();
+  final baseText = _inputController.text.trim();   // preserve what's already there
   setState(() => _isListening = true);
   await _speech.startListening(
     localeId: _sttLocale,
     onResult: (text, isFinal) {
       if (!_isListening) return;
-      setState(() => _inputController.text = text);
+      if (text.isNotEmpty) {
+        final combined = baseText.isEmpty ? text : '$baseText $text';
+        setState(() => _inputController.text = combined);
+      }
       if (isFinal) setState(() => _isListening = false);
     },
   );
@@ -170,6 +175,7 @@ Future<void> _checkLocales() async {
     if (xpAward > 0) {
       await _progress.addXp(xpAward);
       await _progress.recordActivity(type: 'checkin', xp: xpAward);
+      await _progress.markTodayActive();
       _progress.syncEventToBackend(type: 'checkin', xp: xpAward); 
     }
   }
