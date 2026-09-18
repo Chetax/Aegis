@@ -45,6 +45,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
   bool _isListening = false;
   String _sttLocale = 'en_US'; // 'en_US' | 'hi_IN'
   String get _sessionLanguage => _sttLocale == 'hi_IN' ? 'hi' : 'en';
+  bool _isMuted = false;
 
   CheckinPhase _phase = CheckinPhase.idle;
   QuestionFrame? _currentQuestion;
@@ -134,6 +135,7 @@ Future<void> _checkLocales() async {
   }
 
   Future<void> _speakQuestion(QuestionFrame frame) async {
+  if (_isMuted) return;
   await _pollyTts.speak(frame.text, language: _sessionLanguage);
 }
 
@@ -185,6 +187,7 @@ Future<void> _checkLocales() async {
 /// the full detail — reading 4+ sentences cold to someone mid-panic is
 /// a lot; a short lead first matches how you'd actually talk to someone.
 Future<void> _speakVerdict(DoneFrame frame) async {
+  if (_isMuted) return;
   final risk = (frame.result['risk_level'] ?? 'low').toString().toLowerCase();
   final verdict = (frame.result['verdict_text'] ?? '').toString();
   if (verdict.isEmpty) return;
@@ -277,18 +280,45 @@ Future<void> _speakVerdict(DoneFrame frame) async {
     return Scaffold(
       body: GridBackground(
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: SingleChildScrollView(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                switchInCurve: Curves.easeOut,
-                child: KeyedSubtree(
-                  key: ValueKey(_phase),
-                  child: _buildPhase(),
+          child: Stack(
+            children: [
+              // Your existing main content
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: SingleChildScrollView(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    switchInCurve: Curves.easeOut,
+                    child: KeyedSubtree(
+                      key: ValueKey(_phase),
+                      child: _buildPhase(),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              
+              // The new Mute Button pinned to the top right
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  icon: Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up, 
+                    color: _isMuted ? AppColors.textMuted : AppColors.accent,
+                  ),
+                  tooltip: _isMuted ? 'Unmute voice' : 'Mute voice',
+                  onPressed: () {
+                    setState(() {
+                      _isMuted = !_isMuted;
+                    });
+                    // Immediately stop any audio currently playing
+                    if (_isMuted) {
+                      _pollyTts.stop();
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
