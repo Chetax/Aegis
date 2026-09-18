@@ -69,7 +69,7 @@ Not every idea here gets equal build time — prioritized against the hackathon'
 
 - **Mobile:** Flutter — voice input via device-native speech recognition, voice output via AWS Polly (neural bilingual Hindi/Indian-English voice), anonymous device-based identity by default
 - **Backend:** FastAPI
-- **AI reasoning:** Claude (via AWS Bedrock), orchestrated with LangGraph for the check-in and teach-back conversation flows
+- **AI reasoning:** Amazon Nova (via AWS Bedrock) — Nova Pro for intake/extraction, Nova Micro for classification and grading — orchestrated with LangGraph for the check-in and teach-back conversation flows
 - **Knowledge retrieval:** RAG over a sourced, country-scoped rules dictionary (ChromaDB)
 - **Voice synthesis:** AWS Polly (Kajal neural voice — bilingual Hindi + Indian English)
 - **Storage:** DynamoDB for progress/history (XP, streaks, daily activity), local on-device caching as the primary read path so the app never depends on network availability for its own numbers
