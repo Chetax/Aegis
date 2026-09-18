@@ -100,22 +100,27 @@ class _LearnScreenState extends State<LearnScreen> {
   /// completion bonus and updates the streak, then moves to the
   /// complete screen.
   Future<void> _finish() async {
-  if (!await _progress.completedToday()) {
-    final isCorrect = _selectedAnswer == _story!.quiz.correctIndex;
-    final awarded = isCorrect ? 25 : 15;
-    await _progress.addXp(awarded);                              
-    await _progress.recordActivity(type: 'lesson', xp: awarded);
-    _progress.syncEventToBackend(type: 'lesson', xp: awarded);
-    final newStreak = await _progress.markTodayActive();
-    if (mounted) setState(() => _streak = newStreak);
+    if (!await _progress.completedToday()) {
+      final isCorrect = _selectedAnswer == _story!.quiz.correctIndex;
+      final awarded = isCorrect ? 25 : 15;
+      await _progress.addXp(awarded);                              
+      await _progress.recordActivity(type: 'lesson', xp: awarded);
+      _progress.syncEventToBackend(type: 'lesson', xp: awarded);
+      await _progress.markTodayActive();
+    }
+    
+    // ALWAYS fetch the latest totals, even on a replay
+    final xp = await _progress.getXp();
+    final currentStreak = await _progress.getStreak();
+    
+    if (!mounted) return;
+    setState(() {
+      _xp = xp;
+      _streak = currentStreak; // This ensures the UI updates to the correct number
+      _phase = LearnPhase.complete;
+    });
   }
-  final xp = await _progress.getXp();
-  if (!mounted) return;
-  setState(() {
-    _xp = xp;
-    _phase = LearnPhase.complete;
-  });
-}
+
   @override
   void didUpdateWidget(covariant LearnScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
