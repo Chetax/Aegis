@@ -1,17 +1,29 @@
-# app
+# Aegis App
 
-A new Flutter project.
+Flutter mobile client — voice-first check-in, teach-back, daily stories, and rules dictionary.
 
-## Getting Started
+## Structure
 
-This project is a starting point for a Flutter application.
+```
+lib/
+├── model/           # CheckinFrame, DailyStory, RuleEntry
+├── screens/         # checkin, dictionary, home, learn, profile, splash
+├── services/        # checkin_socket, polly_tts, progress, rules, speech, story
+├── theme/           # app_theme.dart
+├── widgets/         # aegis_widgets, story_links_section
+└── config.dart      # backend host config
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Setup
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Running
+
+Update `lib/config.dart`'s backend host to your LAN IP or `10.0.2.2` (Android emulator), then:
+
+```bash
+flutter run
+```
